@@ -2,6 +2,8 @@ package indradwi_restfull.service;
 
 import indradwi_restfull.entity.User;
 import indradwi_restfull.exception.ApiException;
+import indradwi_restfull.security.BCrypt;
+import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
@@ -21,6 +23,7 @@ public class UserService {
 	@Autowired
 	private Validator validator;
 
+	@Transactional
 	public void register(RegisterUserRequest request) {
 		Set<ConstraintViolation<RegisterUserRequest>> constraintViolations = validator.validate(request);
 		if (constraintViolations.size() != 0) {
@@ -34,7 +37,10 @@ public class UserService {
 
 		User user = new User();
 		user.setUsername(request.getUsername());
-		user.setPassword(request.getPassword());
+		user.setPassword(BCrypt.hashpw(request.getPassword(), BCrypt.gensalt()));
+		user.setName(request.getName());
+
+		userRepository.save(user);
 	}
 
 }
