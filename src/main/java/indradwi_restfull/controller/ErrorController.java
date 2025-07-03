@@ -23,4 +23,5 @@ public class ErrorController {
 				.body(WebResponse.<String>builder().errors(exception.getMessage()).build());
 	}
 
+
 }
