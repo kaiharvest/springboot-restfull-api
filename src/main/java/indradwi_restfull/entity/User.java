@@ -26,10 +26,10 @@ public class User {
 
 	private String token;
 
-	@Column(name = "token expire at")
+	@Column(name = "token_expire_at")
 	private Long TokenExpireAt;
 
-	@OneToMany
+	@OneToMany(mappedBy = "user")
 	private List<Contact> contacts;
 
 }

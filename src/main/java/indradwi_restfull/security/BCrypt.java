@@ -57,7 +57,7 @@ import java.util.Arrays;
  * @author Damien Miller
  * @version 0.3
  */
-public class BCrypt {
+public class  BCrypt {
 
 	// BCrypt parameters
 	private static final int GENSALT_DEFAULT_LOG2_ROUNDS = 10;

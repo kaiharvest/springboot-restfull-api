@@ -1,5 +1,6 @@
 package indradwi_restfull.model;
 
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -11,8 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-
-public class RegisterUserRequest {
+public class LoginUserRequest {
 
 	@NotBlank
 	@Size(max = 100)
@@ -21,9 +21,5 @@ public class RegisterUserRequest {
 	@NotBlank
 	@Size(max = 100)
 	private String password;
-
-	@NotBlank
-	@Size(max = 100)
-	private String name;
 
 }

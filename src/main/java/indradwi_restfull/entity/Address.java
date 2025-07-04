@@ -6,15 +6,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
+@Entity
+@Table(name = "addresses")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Entity
-@Table(name = "addresses")
-
 public class Address {
 
 	@Id
@@ -34,8 +31,5 @@ public class Address {
 	@ManyToOne
 	@JoinColumn(name = "contact_id", referencedColumnName = "id")
 	private Contact contact;
-
-	@OneToMany(mappedBy = "contact")
-	private List<Address> addresses;
 
 }
