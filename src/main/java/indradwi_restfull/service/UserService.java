@@ -1,6 +1,7 @@
 package indradwi_restfull.service;
 
 import indradwi_restfull.entity.User;
+import indradwi_restfull.model.UserResponse;
 import indradwi_restfull.security.BCrypt;
 import jakarta.transaction.Transactional;
 import indradwi_restfull.model.RegisterUserRequest;
@@ -33,6 +34,13 @@ public class UserService {
 		user.setName(request.getName());
 
 		userRepository.save(user);
+	}
+
+	public UserResponse get(User user) {
+		return UserResponse.builder()
+				.username(user.getUsername())
+				.name(user.getName())
+				.build();
 	}
 
 }

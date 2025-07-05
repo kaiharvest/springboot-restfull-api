@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import indradwi_restfull.entity.User;
 import indradwi_restfull.model.RegisterUserRequest;
+import indradwi_restfull.model.UserResponse;
 import indradwi_restfull.model.WebResponse;
 import indradwi_restfull.repository.UserRepository;
 import indradwi_restfull.security.BCrypt;
@@ -15,9 +16,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -53,8 +54,9 @@ class UserControllerTest {
 		).andExpectAll(
 				status().isOk()
 		).andDo(result -> {
-			WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
-			});
+			WebResponse<String> response = objectMapper.readValue(
+					result.getResponse().getContentAsString(), new TypeReference<>() {}
+			);
 
 			assertEquals("OK", response.getData());
 		});
@@ -75,8 +77,9 @@ class UserControllerTest {
 		).andExpectAll(
 				status().isBadRequest()
 		).andDo(result -> {
-			WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
-			});
+			WebResponse<String> response = objectMapper.readValue(
+					result.getResponse().getContentAsString(), new TypeReference<>() {}
+			);
 
 			assertNotNull(response.getErrors());
 		});
@@ -88,7 +91,7 @@ class UserControllerTest {
 		user.setUsername("test");
 		user.setPassword(BCrypt.hashpw("rahasia", BCrypt.gensalt()));
 		user.setName("Test");
-		userRepository.save(user);
+		userRepository.saveAndFlush(user);
 
 		RegisterUserRequest request = new RegisterUserRequest();
 		request.setUsername("test");
@@ -103,11 +106,72 @@ class UserControllerTest {
 		).andExpectAll(
 				status().isBadRequest()
 		).andDo(result -> {
-			WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
-			});
+			WebResponse<String> response = objectMapper.readValue(
+					result.getResponse().getContentAsString(), new TypeReference<>() {}
+			);
 
 			assertNotNull(response.getErrors());
 		});
 	}
 
+	@Test
+	void getUserUnauthorized() throws Exception {
+		mockMvc.perform(
+				get("/api/user/current")
+						.accept(MediaType.APPLICATION_JSON_VALUE)
+						.header("X-API-TOKEN", "notfound")
+		).andExpectAll(
+				status().isUnauthorized()
+		).andDo(result -> {
+			WebResponse<String> response = objectMapper.readValue(
+					result.getResponse().getContentAsString(), new TypeReference<>() {}
+			);
+
+			assertNotNull(response.getErrors());
+		});
+	}
+
+	@Test
+	void getUserUnauthorizedTokenNotSend() throws Exception {
+		mockMvc.perform(
+				get("/api/user/current")
+						.accept(MediaType.APPLICATION_JSON_VALUE)
+		).andExpectAll(
+				status().isUnauthorized()
+		).andDo(result -> {
+			WebResponse<String> response = objectMapper.readValue(
+					result.getResponse().getContentAsString(), new TypeReference<>() {}
+			);
+
+			assertNotNull(response.getErrors());
+		});
+	}
+
+	@Test
+	void getUserSuccess() throws Exception {
+		// Simpan user dengan token yang valid
+		User user = new User();
+		user.setUsername("test");
+		user.setPassword(BCrypt.hashpw("rahasia", BCrypt.gensalt()));
+		user.setName("test");
+		user.setToken("test-token-123");
+		user.setTokenExpireAt(System.currentTimeMillis() + 1000000L);
+		userRepository.saveAndFlush(user);
+
+		mockMvc.perform(
+				get("/api/user/current")
+						.accept(MediaType.APPLICATION_JSON_VALUE)
+						.header("X-API-TOKEN", "test-token-123")
+		).andExpectAll(
+				status().isOk()
+		).andDo(result -> {
+			WebResponse<UserResponse> response = objectMapper.readValue(
+					result.getResponse().getContentAsString(), new TypeReference<>() {}
+			);
+
+			assertNull(response.getErrors());
+			assertEquals("test", response.getData().getUsername());
+			assertEquals("test", response.getData().getName());
+		});
+	}
 }
