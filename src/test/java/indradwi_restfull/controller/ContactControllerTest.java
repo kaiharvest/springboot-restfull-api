@@ -2,6 +2,7 @@ package indradwi_restfull.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import indradwi_restfull.entity.Contact;
 import indradwi_restfull.entity.User;
 import indradwi_restfull.model.ContactResponse;
 import indradwi_restfull.model.CreateContactRequest;
@@ -17,7 +18,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -102,5 +106,54 @@ class ContactControllerTest {
 		});
 	}
 
+	@Test
+	void getContactNotFound() throws Exception {
+		mockMvc.perform(
+				get("/api/contacts/32372872232")
+						.accept(MediaType.APPLICATION_JSON)
+						.contentType(MediaType.APPLICATION_JSON_VALUE)
+						.header("X-API-TOKEN", "test")
+		).andExpectAll(
+				status().isNotFound()
+		).andDo(result -> {
+			WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<WebResponse<String>>() {}
+			);
+			assertNotNull(response.getErrors());
+		});
+	}
+
+	@Test
+	void getContactSuccess() throws Exception {
+		User user = userRepository.findById("test").orElseThrow();
+
+		Contact contact = new Contact();
+		contact.setId(UUID.randomUUID().toString());
+		contact.setUser(user);
+		contact.setFirstName("Indra");
+		contact.setLastName("Dwi");
+		contact.setEmail("indra@example.com");
+		contact.setPhone("09122323232");
+		contactRepository.save(contact);
+
+		mockMvc.perform(
+				get("/api/contacts/" + contact.getId())
+						.accept(MediaType.APPLICATION_JSON)
+						.contentType(MediaType.APPLICATION_JSON_VALUE)
+						.header("X-API-TOKEN", "test")
+		).andExpectAll(
+				status().isOk()
+		).andDo(result -> {
+			WebResponse<ContactResponse> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {}
+			);
+			assertNull(response.getErrors());
+			assertEquals(contact.getId(), response.getData().getId());
+			assertEquals(contact.getFirstName(), response.getData().getFirstName());
+			assertEquals(contact.getLastName(), response.getData().getLastName());
+			assertEquals(contact.getEmail(), response.getData().getEmail());
+			assertEquals(contact.getPhone(), response.getData().getPhone());
+
+			assertTrue(contactRepository.existsById(response.getData().getId()));
+		});
+	}
 
 }
