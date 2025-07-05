@@ -27,20 +27,22 @@ public class UserArgumentResolver implements HandlerMethodArgumentResolver {
 	}
 
 	@Override
-	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
+	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
+	                              NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+
 		HttpServletRequest request = (HttpServletRequest) webRequest.getNativeRequest();
-		String token = request.getHeader("X-API_TOKEN");
+		String token = request.getHeader("X-API-TOKEN"); // ✅ perbaiki di sini
 		log.info("Token: {}", token);
-		if (token != null) {
+
+		if (token == null || token.isBlank()) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
 		}
 
 		User user = userRepository.findFirstByToken(token)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized"));
 
-		log.info("USER: {}", user);
-		if (user.getTokenExpireAt() < System.currentTimeMillis()) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+		if (user.getTokenExpireAt() == null || user.getTokenExpireAt() < System.currentTimeMillis()) {
+			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token expired");
 		}
 
 		return user;

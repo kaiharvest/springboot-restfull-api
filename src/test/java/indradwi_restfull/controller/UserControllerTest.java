@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import indradwi_restfull.entity.User;
 import indradwi_restfull.model.RegisterUserRequest;
+import indradwi_restfull.model.UpdateUserRequest;
 import indradwi_restfull.model.UserResponse;
 import indradwi_restfull.model.WebResponse;
 import indradwi_restfull.repository.UserRepository;
@@ -17,8 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -149,7 +149,6 @@ class UserControllerTest {
 
 	@Test
 	void getUserSuccess() throws Exception {
-		// Simpan user dengan token yang valid
 		User user = new User();
 		user.setUsername("test");
 		user.setPassword(BCrypt.hashpw("rahasia", BCrypt.gensalt()));
@@ -174,4 +173,88 @@ class UserControllerTest {
 			assertEquals("test", response.getData().getName());
 		});
 	}
+
+	@Test
+	void getUserTokenExpired() throws Exception {
+		User user = new User();
+		user.setUsername("test");
+		user.setPassword(BCrypt.hashpw("rahasia", BCrypt.gensalt()));
+		user.setName("test");
+		user.setToken("test-token-123");
+		user.setTokenExpireAt(System.currentTimeMillis() - 1000000);
+		userRepository.saveAndFlush(user);
+
+		mockMvc.perform(
+				get("/api/user/current")
+						.accept(MediaType.APPLICATION_JSON_VALUE)
+						.header("X-API-TOKEN", "test-token-123")
+		).andExpectAll(
+				status().isUnauthorized()
+		).andDo(result -> {
+			WebResponse<String> response = objectMapper.readValue(
+					result.getResponse().getContentAsString(), new TypeReference<>() {}
+			);
+
+			assertNotNull(response.getErrors());
+		});
+	}
+
+	@Test
+	void updateUserWithInvalidToken() throws Exception {
+		UpdateUserRequest request = new UpdateUserRequest();
+
+		mockMvc.perform(
+				patch("/api/user/current")
+						.accept(MediaType.APPLICATION_JSON_VALUE)
+						.contentType(MediaType.APPLICATION_JSON_VALUE)
+						.content(objectMapper.writeValueAsString(request))
+		).andExpectAll(
+				status().isUnauthorized()
+		).andDo(result -> {
+			WebResponse<String> response = objectMapper.readValue(
+					result.getResponse().getContentAsString(), new TypeReference<>() {}
+			);
+
+			assertNotNull(response.getErrors());
+		});
+	}
+
+	@Test
+	void updateUserSuccess() throws Exception {
+		User user = new User();
+		user.setUsername("test");
+		user.setPassword(BCrypt.hashpw("rahasia", BCrypt.gensalt()));
+		user.setName("test");
+		user.setToken("test-token-123");
+		user.setTokenExpireAt(System.currentTimeMillis() + 1000000000L);
+		userRepository.saveAndFlush(user);
+
+		UpdateUserRequest request = new UpdateUserRequest();
+		request.setName("Indra");
+		request.setPassword("indra12345");
+
+		mockMvc.perform(
+				patch("/api/user/current")
+						.accept(MediaType.APPLICATION_JSON_VALUE)
+						.contentType(MediaType.APPLICATION_JSON_VALUE)
+						.content(objectMapper.writeValueAsString(request))
+						.header("X-API-TOKEN", "test-token-123")
+		).andExpectAll(
+				status().isOk()
+		).andDo(result -> {
+			WebResponse<UserResponse> response = objectMapper.readValue(
+					result.getResponse().getContentAsString(), new TypeReference<>() {}
+			);
+
+			assertNull(response.getErrors());
+			assertEquals("Indra", response.getData().getName());
+			assertEquals("test", response.getData().getUsername());
+
+			User userDb = userRepository.findById("test").orElse(null);
+			assertNotNull(userDb);
+			assertTrue(BCrypt.checkpw("indra12345", userDb.getPassword()));
+		});
+	}
+
+
 }
